@@ -2363,15 +2363,36 @@
     window.dispatchEvent(new CustomEvent("household-status", { detail: Object.assign({ status: s, code: currentCode }, extra||{}) }));
   }
 
+  var pendingPushData = null;
+
+  function doPush(){
+    if (!currentCode || !pendingPushData) return;
+    var data = pendingPushData;
+    pendingPushData = null;
+    fs.setDoc(fs.doc(db, "households", currentCode), data).catch(function(e){
+      console.warn("Household sync push failed", e);
+      pendingPushData = data;
+    });
+  }
+
   function schedulePush(data){
     if (!currentCode || applyingRemote) return;
+    pendingPushData = data;
     clearTimeout(pushTimer);
-    pushTimer = setTimeout(function(){
-      fs.setDoc(fs.doc(db, "households", currentCode), data).catch(function(e){
-        console.warn("Household sync push failed", e);
-      });
-    }, 700);
+    pushTimer = setTimeout(doPush, 700);
   }
+
+  function flushPush(){
+    if (pendingPushData) {
+      clearTimeout(pushTimer);
+      doPush();
+    }
+  }
+
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState === "hidden") flushPush();
+  });
+  window.addEventListener("pagehide", flushPush);
 
   function connect(code, silent){
     currentCode = code;
