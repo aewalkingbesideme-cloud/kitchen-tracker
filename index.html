@@ -1087,7 +1087,7 @@
   }
 
   function syncedSlice(){
-    return { recipes: state.recipes, snacksLibrary: state.snacksLibrary, goals: state.goals, months: state.months };
+    return { recipes: state.recipes, snacksLibrary: state.snacksLibrary, goals: state.goals, months: state.months, grocery: state.grocery };
   }
 
   function persist(){
@@ -2126,7 +2126,7 @@
     receiptCardEl.querySelectorAll('input[type="checkbox"][data-itemkey]').forEach(function(cb){
       cb.addEventListener("change", function(){
         wg.checkedItems[cb.getAttribute("data-itemkey")] = cb.checked;
-        saveLocal();
+        persist();
         renderReceipt();
       });
     });
@@ -2135,7 +2135,7 @@
         var id = btn.getAttribute("data-remove-extra");
         wg.extras = wg.extras.filter(function(ex){ return String(ex.id) !== String(id); });
         delete wg.checkedItems["extra:" + id];
-        saveLocal();
+        persist();
         renderReceipt();
       });
     });
@@ -2146,7 +2146,7 @@
       var val = input.value.trim();
       if (!val) return;
       wg.extras.push({ id: uid(), name: val });
-      saveLocal();
+      persist();
       renderReceipt();
       var newInput = document.getElementById("extraInput");
       if (newInput) newInput.focus();
@@ -2154,14 +2154,14 @@
     document.getElementById("clearCheckedBtn").addEventListener("click", function(){
       wg.extras = wg.extras.filter(function(ex){ return !wg.checkedItems["extra:" + ex.id]; });
       wg.checkedItems = {};
-      saveLocal();
+      persist();
       renderReceipt();
     });
     document.getElementById("clearWeekBtn").addEventListener("click", function(){
       if (!confirm("Clear all extras and checkmarks for this week? Recipe assignments will not be affected.")) return;
       wg.extras = [];
       wg.checkedItems = {};
-      saveLocal();
+      persist();
       renderReceipt();
     });
   }
@@ -2291,6 +2291,7 @@
     state.snacksLibrary = d.snacksLibrary || {};
     state.goals = d.goals || state.goals;
     state.months = d.months || {};
+    state.grocery = d.grocery || {};
     saveLocal();
     renderAll();
   });
