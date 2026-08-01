@@ -2233,14 +2233,19 @@
   }
 
   // ---------- Household sync banner (UI only; logic lives in module script) ----------
-  function renderSyncBanner(status){
+  function renderSyncBanner(status, message){
     status = status || (state.householdCode ? "connected" : "disconnected");
-    syncBannerEl.className = "sync-banner" + (status === "connected" ? " connected" : status === "error" ? " error" : "");
+    syncBannerEl.className = "sync-banner" + (status === "connected" ? " connected" : (status === "error" || status === "push-error") ? " error" : "");
     if (status === "connected") {
       syncBannerEl.innerHTML = '<span class="sync-dot"></span><span>Synced to household <strong>' + escapeHtml(state.householdCode) + '</strong></span>' +
         '<button type="button" class="pill-btn ghost small" id="changeHouseholdBtn2">Change</button>';
       var btn = syncBannerEl.querySelector("#changeHouseholdBtn2");
       if (btn) btn.addEventListener("click", openHouseholdModal);
+    } else if (status === "push-error") {
+      syncBannerEl.innerHTML = '<span class="sync-dot"></span><span>Your last change didn\'t save to the household' + (message ? ' (' + escapeHtml(message) + ')' : '') + ' — it will retry, or check your connection</span>' +
+        '<button type="button" class="pill-btn ghost small" id="retryHouseholdBtn">Settings</button>';
+      var btnP = syncBannerEl.querySelector("#retryHouseholdBtn");
+      if (btnP) btnP.addEventListener("click", openHouseholdModal);
     } else if (status === "error") {
       syncBannerEl.innerHTML = '<span class="sync-dot"></span><span>Sync error — working offline on this device</span>' +
         '<button type="button" class="pill-btn ghost small" id="retryHouseholdBtn">Settings</button>';
@@ -2369,9 +2374,12 @@
     if (!currentCode || !pendingPushData) return;
     var data = pendingPushData;
     pendingPushData = null;
-    fs.setDoc(fs.doc(db, "households", currentCode), data).catch(function(e){
+    fs.setDoc(fs.doc(db, "households", currentCode), data).then(function(){
+      status("connected");
+    }).catch(function(e){
       console.warn("Household sync push failed", e);
       pendingPushData = data;
+      status("push-error", { message: e.message });
     });
   }
 
